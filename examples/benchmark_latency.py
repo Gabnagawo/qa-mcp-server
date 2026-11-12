@@ -35,7 +35,7 @@ ROOT = Path(__file__).resolve().parents[1]
 APK_DIR = ROOT / "examples" / "apks"
 APP = "org.qamcp.sample.notes"
 
-# (tool, arguments). The app is installed and running before measuring.
+# (tool, arguments). Measured on the note editor screen with a focused text field.
 CALLS: list[tuple[str, dict[str, Any]]] = [
     ("list_devices", {}),
     ("install_apk", {"apk_path": "sample-notes-1.0.apk"}),
@@ -74,6 +74,11 @@ async def measure(session: ClientSession, iterations: int) -> list[tuple[str, li
             if result.isError != ((tool, args) == REJECTED):
                 raise RuntimeError(f"unexpected result for {label}: {result.content}")
         rows.append((label, samples))
+        if tool == "launch_app":
+            # launch_app resets to the notes list; open the editor and focus a text field
+            # so the remaining calls (including input_text) run on the editor screen.
+            await session.call_tool("tap", {"content_desc": "New note"})
+            await session.call_tool("tap", {"resource_id": "title_input"})
     return rows
 
 
