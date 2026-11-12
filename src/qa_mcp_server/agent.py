@@ -146,7 +146,7 @@ class OllamaProvider:
                 wire.append(entry)
             else:
                 wire.append({"role": "user", "content": msg.content})
-        payload = {
+        payload: dict[str, Any] = {
             "model": self.model,
             "messages": wire,
             "tools": [
