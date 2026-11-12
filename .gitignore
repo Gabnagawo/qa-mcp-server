@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+qa-mcp.toml
+
+# Runtime artifacts (screenshots, audit log)
+qa-mcp-artifacts/
+*.apk
+!examples/apks/*.apk
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
