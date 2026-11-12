@@ -72,7 +72,9 @@ class ChatProvider(Protocol):
     name: str
     model: str
 
-    def chat(self, system: str, messages: list[Message], tools: list[ToolSpec]) -> AssistantTurn: ...
+    def chat(
+        self, system: str, messages: list[Message], tools: list[ToolSpec]
+    ) -> AssistantTurn: ...
 
 
 def _new_id() -> str:
@@ -205,9 +207,7 @@ class AnthropicProvider:
 
     name = "anthropic"
 
-    def __init__(
-        self, model: str = DEFAULT_MODELS["anthropic"], client: Any | None = None
-    ) -> None:
+    def __init__(self, model: str = DEFAULT_MODELS["anthropic"], client: Any | None = None) -> None:
         if client is None:
             import anthropic  # lazy optional import
 

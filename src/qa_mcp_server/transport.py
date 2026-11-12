@@ -107,7 +107,8 @@ class SubprocessTransport:
             )
         except FileNotFoundError as exc:
             raise CommandFailed(f"executable not found: {args[0]}") from exc
-        assert proc.stdout is not None and proc.stderr is not None  # noqa: S101 (PIPE set above)
+        assert proc.stdout is not None  # noqa: S101 (PIPE set above)
+        assert proc.stderr is not None  # noqa: S101
 
         overflow = threading.Event()
         out = _CappedReader(proc.stdout, max_bytes, overflow)

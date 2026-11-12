@@ -227,7 +227,9 @@ class QAService:
 
     def logcat(self, req: LogcatRequest) -> LogcatResult:
         serial = self.resolve_serial(req.serial)
-        limit = min(req.max_lines or self.settings.logcat_default_lines, self.settings.logcat_max_lines)
+        limit = min(
+            req.max_lines or self.settings.logcat_default_lines, self.settings.logcat_max_lines
+        )
         pid = None
         if req.package is not None:
             self.check_package(req.package)
@@ -287,7 +289,8 @@ class QAService:
     def tap(self, req: TapRequest) -> TapResult:
         serial = self.resolve_serial(req.serial)
         if req.selector is None:
-            assert req.x is not None and req.y is not None  # noqa: S101 (model validator)
+            assert req.x is not None  # noqa: S101 (guaranteed by TapRequest validator)
+            assert req.y is not None  # noqa: S101
             result = self.adb.tap(serial, req.x, req.y)
             return TapResult(serial=serial, x=req.x, y=req.y, dry_run=result.dry_run)
         nodes = parse_hierarchy(self.adb.ui_dump(serial))
@@ -326,7 +329,9 @@ class QAService:
     def press_key(self, req: PressKeyRequest) -> ActionResult:
         serial = self.resolve_serial(req.serial)
         result = self.adb.keyevent(serial, req.keycode)
-        return ActionResult(serial=serial, action="press_key", detail=req.keycode, dry_run=result.dry_run)
+        return ActionResult(
+            serial=serial, action="press_key", detail=req.keycode, dry_run=result.dry_run
+        )
 
     def run_test_suite(self, req: RunSuiteRequest) -> SuiteResult:
         suite = self.settings.test_suites.get(req.name)
@@ -380,6 +385,8 @@ def _read_junit(suite: TestSuiteConfig) -> dict[str, int] | None:
     try:
         root = SafeET.parse(path).getroot()
     except Exception:
+        return None
+    if root is None:
         return None
     suites = [root] if root.tag == "testsuite" else list(root.iter("testsuite"))
     totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}

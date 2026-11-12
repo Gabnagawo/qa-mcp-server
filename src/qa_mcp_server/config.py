@@ -75,7 +75,9 @@ class Settings(BaseModel):
     )
     apk_dir: Path = Field(default=Path("apks"), description="Only APKs inside this dir install.")
     artifacts_dir: Path = Field(default=Path("qa-mcp-artifacts"))
-    audit_log: Path | None = Field(default=None, description="Defaults to artifacts_dir/audit.jsonl")
+    audit_log: Path | None = Field(
+        default=None, description="Defaults to artifacts_dir/audit.jsonl"
+    )
     dry_run: bool = False
     redact_input_text: bool = True
 
@@ -135,7 +137,11 @@ class Settings(BaseModel):
                 if key in data and not Path(data[key]).is_absolute():
                     data[key] = str(base / data[key])
             for suite in data.get("test_suites", {}).values():
-                if isinstance(suite, dict) and suite.get("cwd") and not Path(suite["cwd"]).is_absolute():
+                if (
+                    isinstance(suite, dict)
+                    and suite.get("cwd")
+                    and not Path(suite["cwd"]).is_absolute()
+                ):
                     suite["cwd"] = str(base / suite["cwd"])
         data.update(_env_overrides(env))
         data.update({k: v for k, v in overrides.items() if v is not None})

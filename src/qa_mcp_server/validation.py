@@ -30,7 +30,7 @@ SINCE_RE = r"^(?:\d{4}-)?\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{1,3})?$"
 # meaning for sh (quotes, ; & | $ ` \ < > ( ) { } [ ] * ? ~ # ! %) and no newlines.
 INPUT_TEXT_RE = r"^[A-Za-z0-9 @._,:/+=-]{1,500}$"
 # Every token passed after `adb shell` / `adb exec-out` must match this.
-SAFE_SHELL_TOKEN_RE = r"^[A-Za-z0-9._/:=@,+%-]+$"
+SAFE_SHELL_TOKEN_RE = r"^[A-Za-z0-9._/:=@,+%-]+$"  # noqa: S105 (regex, not a secret)
 APK_FILENAME_RE = r"^[A-Za-z0-9][A-Za-z0-9._-]{0,200}\.apk$"
 
 MAX_COORD = 10_000

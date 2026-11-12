@@ -11,7 +11,7 @@ import re
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
-from xml.etree.ElementTree import Element  # noqa: S405 (type only; parsing uses defusedxml)
+from xml.etree.ElementTree import Element  # type only; parsing uses defusedxml
 
 from defusedxml import ElementTree as SafeET
 
@@ -19,8 +19,16 @@ from qa_mcp_server.errors import CommandFailed
 from qa_mcp_server.validation import Selector
 
 _BOUNDS_RE = re.compile(r"^\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]$")
-_FLAG_ATTRS = ("clickable", "long-clickable", "scrollable", "checkable", "checked", "focused",
-               "selected", "password")
+_FLAG_ATTRS = (
+    "clickable",
+    "long-clickable",
+    "scrollable",
+    "checkable",
+    "checked",
+    "focused",
+    "selected",
+    "password",
+)
 
 
 @dataclass

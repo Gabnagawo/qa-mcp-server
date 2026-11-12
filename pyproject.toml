@@ -73,6 +73,7 @@ select = [
 ]
 ignore = [
     "S603", # subprocess call: argv lists are built by typed builders and gated by the allowlist
+    "N818", # exception names read better as PolicyViolation / CommandFailed
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -105,3 +106,7 @@ python_version = "3.12"
 strict = true
 warn_unreachable = true
 files = ["src", "examples"]
+
+[[tool.mypy.overrides]]
+module = ["openai", "anthropic"]
+ignore_missing_imports = true

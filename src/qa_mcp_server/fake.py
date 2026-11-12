@@ -163,7 +163,7 @@ class FakeAdbTransport:
             return 1, b"", f"adb: device {device.state}".encode()
         return self._device_command(cmd)
 
-    def _device_command(self, cmd: list[str]) -> tuple[int, bytes, bytes]:  # noqa: PLR0911
+    def _device_command(self, cmd: list[str]) -> tuple[int, bytes, bytes]:
         head = tuple(cmd[:3])
         if cmd[:2] == ["install", "-r"]:
             return self._install(cmd[2])
@@ -190,7 +190,9 @@ class FakeAdbTransport:
         if head == ("shell", "input", "text"):
             if self.state.focused:
                 text = cmd[3].replace("%s", " ")
-                self.state.typed[self.state.focused] = self.state.typed.get(self.state.focused, "") + text
+                self.state.typed[self.state.focused] = (
+                    self.state.typed.get(self.state.focused, "") + text
+                )
             return 0, b"", b""
         if head == ("shell", "input", "keyevent"):
             self._key(cmd[3])
@@ -214,7 +216,11 @@ class FakeAdbTransport:
         name = Path(path.replace("\\", "/")).name
         package = self.scenario.apks.get(name)
         if package is None:
-            return 1, b"Performing Streamed Install\n", b"adb: failed to install: Failure [INSTALL_PARSE_FAILED_NOT_APK]"
+            return (
+                1,
+                b"Performing Streamed Install\n",
+                b"adb: failed to install: Failure [INSTALL_PARSE_FAILED_NOT_APK]",
+            )
         self.state.installed.add(package)
         return 0, b"Performing Streamed Install\nSuccess\n", b""
 
@@ -275,8 +281,10 @@ class FakeAdbTransport:
             if node.bounds is None:
                 continue
             x1, y1, x2, y2 = node.bounds
-            if x1 <= x < x2 and y1 <= y < y2 and (
-                "clickable" in node.flags or node.cls == "EditText"
+            if (
+                x1 <= x < x2
+                and y1 <= y < y2
+                and ("clickable" in node.flags or node.cls == "EditText")
             ):
                 best = node
         return best

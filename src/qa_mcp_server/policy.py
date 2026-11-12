@@ -19,13 +19,13 @@ from pathlib import PurePosixPath, PureWindowsPath
 
 from qa_mcp_server.errors import PolicyViolation
 from qa_mcp_server.validation import (
+    ACTIVITY_RE,
     ALLOWED_KEYCODES,
     APK_FILENAME_RE,
     MAX_COORD,
     PACKAGE_RE,
     SAFE_SHELL_TOKEN_RE,
     SERIAL_RE,
-    ACTIVITY_RE,
 )
 
 
@@ -101,9 +101,7 @@ class CommandRule:
         return True
 
 
-GLOBAL_RULES: tuple[CommandRule, ...] = (
-    CommandRule("devices", ("devices", "-l"), mutating=False),
-)
+GLOBAL_RULES: tuple[CommandRule, ...] = (CommandRule("devices", ("devices", "-l"), mutating=False),)
 
 # Matched against the arguments that follow ``-s <serial>``.
 DEVICE_RULES: tuple[CommandRule, ...] = (
@@ -179,5 +177,7 @@ def allowlist_summary() -> list[str]:
     for rule in (*GLOBAL_RULES, *DEVICE_RULES):
         prefix = "adb" if rule in GLOBAL_RULES else "adb -s <serial>"
         shape = " ".join(t if isinstance(t, str) else f"<{t.name}>" for t in rule.pattern)
-        lines.append(f"{rule.name:<17} {'mutating ' if rule.mutating else 'read-only'}  {prefix} {shape}")
+        lines.append(
+            f"{rule.name:<17} {'mutating ' if rule.mutating else 'read-only'}  {prefix} {shape}"
+        )
     return lines

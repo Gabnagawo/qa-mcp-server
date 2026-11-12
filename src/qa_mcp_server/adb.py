@@ -83,7 +83,9 @@ class AdbClient:
         )
         if check and result.returncode != 0:
             detail = result.error_text or result.text.strip()
-            raise CommandFailed(f"adb {rule.name} failed (exit {result.returncode}): {detail[-500:]}")
+            raise CommandFailed(
+                f"adb {rule.name} failed (exit {result.returncode}): {detail[-500:]}"
+            )
         return result
 
     # -- commands ------------------------------------------------------------------

@@ -6,8 +6,7 @@ import base64
 import json
 import time
 from collections.abc import Callable, Sequence
-from pathlib import Path
-from typing import Annotated, Any, Literal, TypeVar
+from typing import Annotated, Any, Literal
 
 import anyio.to_thread
 from mcp.server.fastmcp import FastMCP
@@ -55,8 +54,6 @@ dump_ui (read the screen) -> tap / input_text / press_key -> dump_ui again -> lo
 (level E, package) to catch crashes -> screenshot for evidence. Prefer tap with a
 selector (text, resource_id or content_desc taken from dump_ui) over raw coordinates.
 All inputs are validated; commands outside the allowlist are rejected."""
-
-T = TypeVar("T")
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 DEVICE_ACTION = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
@@ -116,7 +113,7 @@ class AuditedFastMCP(FastMCP):
         return result
 
 
-async def _offload(fn: Callable[[], T]) -> T:
+async def _offload[T](fn: Callable[[], T]) -> T:
     """Run blocking adb work in a worker thread so the event loop stays responsive."""
     return await anyio.to_thread.run_sync(fn)
 
@@ -165,7 +162,9 @@ def build_server(
 
     @mcp.tool(annotations=READ_ONLY)
     async def list_devices() -> DevicesResult:
-        """List attached Android devices and emulators with their state (device/offline/unauthorized)."""
+        """List attached Android devices and emulators with their state.
+
+        State is device, offline or unauthorized; only "device" accepts commands."""
         return await _offload(svc.list_devices)
 
     @mcp.tool(annotations=INSTALL)
@@ -175,7 +174,7 @@ def build_server(
             Field(
                 min_length=1,
                 max_length=4096,
-                description="File name or path of an .apk inside the server's allowed APK directory.",
+                description="File name or path of an .apk inside the server's APK directory.",
             ),
         ],
         serial: Serial | None = None,
@@ -190,7 +189,9 @@ def build_server(
         activity: ActivityName | None = None,
         serial: Serial | None = None,
     ) -> LaunchResult:
-        """Start an installed app (launcher activity unless `activity` is given). Reports cold/hot start time."""
+        """Start an installed app (launcher activity unless `activity` is given).
+
+        Reports launch state (COLD/WARM/HOT) and TotalTime from `am start -W`."""
         req = LaunchRequest(package=package, activity=activity, serial=serial)
         return await _offload(lambda: svc.launch_app(req))
 
@@ -199,10 +200,12 @@ def build_server(
         serial: Serial | None = None,
         save: Annotated[
             bool,
-            Field(description="Save a PNG under the artifacts dir and return its path instead of the image."),
+            Field(
+                description="Save a PNG under the artifacts dir and return its path, not the image."
+            ),
         ] = False,
     ) -> list[ContentBlock]:
-        """Capture the screen. Returns the PNG as image content, or saves it and returns the file path."""
+        """Capture the screen as PNG image content, or save it and return the file path."""
         req = ScreenshotRequest(serial=serial, save=save)
         png, saved = await _offload(lambda: svc.screenshot(req))
         if saved is not None:
@@ -219,7 +222,9 @@ def build_server(
             PackageName | None, Field(description="Only lines from this app's running process.")
         ] = None,
         tag: Annotated[str | None, Field(pattern=r"^[A-Za-z0-9_.\-]{1,64}$")] = None,
-        level: Annotated[LogLevel, Field(description="Minimum priority: V < D < I < W < E < F.")] = "V",
+        level: Annotated[
+            LogLevel, Field(description="Minimum priority: V < D < I < W < E < F.")
+        ] = "V",
         since: Annotated[
             str | None,
             Field(
@@ -229,7 +234,9 @@ def build_server(
         ] = None,
         max_lines: Annotated[int | None, Field(ge=1, le=5000)] = None,
     ) -> LogcatResult:
-        """Read the logcat buffer (non-blocking dump), filtered by package, tag, level and time, size-capped."""
+        """Read the logcat buffer (non-blocking dump), size-capped.
+
+        Filters: package (running process), tag, minimum level and since."""
         req = LogcatRequest(
             serial=serial, package=package, tag=tag, level=level, since=since, max_lines=max_lines
         )
@@ -251,10 +258,14 @@ def build_server(
     async def tap(
         x: Annotated[int | None, Field(ge=0, le=10000)] = None,
         y: Annotated[int | None, Field(ge=0, le=10000)] = None,
-        text: Annotated[str | None, Field(max_length=200, description="Selector: visible text")] = None,
+        text: Annotated[
+            str | None, Field(max_length=200, description="Selector: visible text")
+        ] = None,
         resource_id: Annotated[
             str | None,
-            Field(max_length=255, description="Selector: resource-id, full or short ('save_button')"),
+            Field(
+                max_length=255, description="Selector: resource-id, full or short ('save_button')"
+            ),
         ] = None,
         content_desc: Annotated[
             str | None, Field(max_length=200, description="Selector: content description")
@@ -268,7 +279,11 @@ def build_server(
         selector = None
         if text is not None or resource_id is not None or content_desc is not None:
             selector = Selector(
-                text=text, resource_id=resource_id, content_desc=content_desc, match=match, index=index
+                text=text,
+                resource_id=resource_id,
+                content_desc=content_desc,
+                match=match,
+                index=index,
             )
         req = TapRequest(x=x, y=y, selector=selector, serial=serial)
         return await _offload(lambda: svc.tap(req))
@@ -328,4 +343,3 @@ TOOL_NAMES = (
     "press_key",
     "run_test_suite",
 )
-

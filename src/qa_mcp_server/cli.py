@@ -107,8 +107,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(raw)
     if args.command == "allowlist":
-        print("
-".join(allowlist_summary()))
+        print("\n".join(allowlist_summary()))
         return 0
     if args.command == "agent":
         return anyio.run(_run_agent, args)
