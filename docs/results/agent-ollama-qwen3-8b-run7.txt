@@ -1,0 +1,12 @@
+provider=ollama model=qwen3:8b backend=fake
+  [ok ] list_devices() -> {"devices":[{"serial":"emulator-5554","state":"device","model":"sdk_gphone64_x86_64","product":"sdk_gphone64_x86_64"},{"serial":"R5CT0000FAKE","state":"offline"
+  [ok ] install_apk(apk_path='sample-notes-1.0.apk', serial='emulator-5554') -> {"serial":"emulator-5554","apk":"sample-notes-1.0.apk","sha256":"a9f36ce9e26147bb58779ae0224220e1614a2f82cdeb560b974b12b6492b8a95","size_bytes":431,"installed":
+  [ok ] launch_app(package='org.qamcp.sample.notes', serial='emulator-5554') -> {"serial":"emulator-5554","component":"org.qamcp.sample.notes/.MainActivity","status":"ok","launch_state":"COLD","total_time_ms":412,"dry_run":false}
+
+stopped: provider_error after 3 tool calls
+
+provider error: Ollama returned 500: {"error":"prediction aborted, token repeat limit reached"}
+
+real	5m7.990s
+user	0m0.031s
+sys	0m0.015s
