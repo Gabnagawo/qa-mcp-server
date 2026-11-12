@@ -79,6 +79,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S108", "S604", "S607"]
 "examples/**" = ["S101"]
+"examples/suites/**" = ["PT009"]  # unittest-style asserts survive python -O
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

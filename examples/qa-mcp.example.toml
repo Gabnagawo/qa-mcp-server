@@ -1,0 +1,25 @@
+# qa-mcp-server configuration. Copy to qa-mcp.toml (gitignored) and adjust.
+# Relative paths are resolved against this file's directory.
+
+backend = "adb"            # "adb" (real devices) or "fake" (scripted device)
+adb_path = "adb"           # or an absolute path to platform-tools/adb
+apk_dir = "apks"           # install_apk only accepts .apk files inside this directory
+artifacts_dir = "../qa-mcp-artifacts"   # screenshots + audit.jsonl
+dry_run = false            # true: mutating adb commands are planned and audited, not run
+redact_input_text = true   # audit log stores only the length of typed text
+
+command_timeout_s = 30
+install_timeout_s = 180
+max_output_bytes = 4194304
+logcat_max_lines = 2000
+
+# Restrict which apps an agent may launch / read logs from (exact or "prefix.*").
+# allowed_packages = ["org.qamcp.*", "net.gsantner.markor"]
+
+# Test suites the agent can run by name. The agent cannot change argv, cwd or env.
+[test_suites.smoke]
+argv = ["{python}", "suites/smoke_suite.py"]   # {python} = the server's interpreter
+cwd = "."
+timeout_s = 120
+junit_xml = "smoke-junit.xml"
+description = "Fixture smoke checks (stand-in for an instrumentation or Appium suite)"
