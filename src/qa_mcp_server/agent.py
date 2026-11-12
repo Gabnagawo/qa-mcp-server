@@ -140,7 +140,12 @@ class OllamaProvider:
             response = self.client.post(f"{self.base_url}/api/chat", json=payload)
             if response.status_code < 500 or attempt == self.retries:
                 break
-        response.raise_for_status()
+        if response.is_error:
+            raise httpx.HTTPStatusError(
+                f"Ollama returned {response.status_code}: {response.text[:300]}",
+                request=response.request,
+                response=response,
+            )
         message = response.json().get("message", {})
         calls = []
         for raw in message.get("tool_calls") or []:
