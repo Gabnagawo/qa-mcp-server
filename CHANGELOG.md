@@ -21,7 +21,8 @@ All notable changes to this project are documented here. The format follows
   installed packages, UI hierarchy fixtures with tap transitions, logcat lines, a PNG screenshot
   and a planted crash in a synthetic notes app.
 - Reference agent loop (`qa-mcp-server agent`) with Ollama (default `qwen3:8b`), Anthropic and
-  OpenAI providers selected through `LLM_PROVIDER` / `LLM_MODEL`.
+  OpenAI providers selected through `LLM_PROVIDER` / `LLM_MODEL`. The Ollama provider sets
+  `num_ctx` (default 16384), sends compact JSON tool results and retries once on HTTP 5xx.
 - Security test matrix (tool layer through a real MCP client, plus the raw command layer),
   in-process MCP client tests, a stdio demo transcript and a latency benchmark.
 - Docs: threat model (`docs/SECURITY.md`), real-device demo script for Markor from F-Droid

@@ -134,7 +134,16 @@ class OllamaProvider:
             ],
             "stream": False,
             "think": False,
-            "options": {"temperature": 0, "seed": 7, "num_ctx": self.num_ctx},
+            # Qwen3 loops under greedy decoding; use its recommended non-thinking sampling,
+            # seeded, with a cap on generated tokens.
+            "options": {
+                "temperature": 0.7,
+                "top_p": 0.8,
+                "top_k": 20,
+                "seed": 7,
+                "num_ctx": self.num_ctx,
+                "num_predict": 1024,
+            },
         }
         for attempt in range(self.retries + 1):
             response = self.client.post(f"{self.base_url}/api/chat", json=payload)
@@ -327,7 +336,7 @@ class ExplorationReport:
     model: str
     steps: list[StepRecord]
     final_answer: str
-    stopped_reason: Literal["answered", "max_steps"]
+    stopped_reason: Literal["answered", "max_steps", "provider_error"]
 
 
 async def explore(
@@ -347,7 +356,12 @@ async def explore(
     messages = [Message(role="user", content=goal)]
     steps: list[StepRecord] = []
     for _ in range(max_steps):
-        turn = await anyio.to_thread.run_sync(provider.chat, SYSTEM_PROMPT, messages, specs)
+        try:
+            turn = await anyio.to_thread.run_sync(provider.chat, SYSTEM_PROMPT, messages, specs)
+        except Exception as exc:  # network, HTTP or SDK errors end the session, not the process
+            return ExplorationReport(
+                provider.name, provider.model, steps, f"provider error: {exc}", "provider_error"
+            )
         messages.append(Message(role="assistant", content=turn.text, tool_calls=turn.tool_calls))
         if not turn.tool_calls:
             return ExplorationReport(provider.name, provider.model, steps, turn.text, "answered")

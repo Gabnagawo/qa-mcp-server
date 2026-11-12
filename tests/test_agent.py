@@ -81,6 +81,18 @@ async def test_explore_runs_tool_calls_until_answer(client: ClientSession) -> No
     assert last_history[-1].content.startswith("ERROR:")
 
 
+class FailingProvider(ScriptedProvider):
+    def chat(self, system: str, messages: list[Message], tools: list[ToolSpec]) -> AssistantTurn:
+        raise RuntimeError("model unavailable")
+
+
+@pytest.mark.anyio
+async def test_explore_reports_provider_errors(client: ClientSession) -> None:
+    report = await explore(client, FailingProvider([]), "go")
+    assert report.stopped_reason == "provider_error"
+    assert "model unavailable" in report.final_answer
+
+
 @pytest.mark.anyio
 async def test_explore_stops_at_max_steps(client: ClientSession) -> None:
     provider = ScriptedProvider([call("list_devices"), call("list_devices")])
