@@ -37,7 +37,10 @@ class TestSuiteConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    argv: tuple[str, ...] = Field(min_length=1, description="Executable and arguments.")
+    argv: tuple[str, ...] = Field(
+        min_length=1,
+        description="Executable and arguments. '{python}' means the server's own interpreter.",
+    )
     cwd: Path | None = Field(default=None, description="Working directory.")
     timeout_s: float = Field(default=900.0, gt=0, le=MAX_TIMEOUT_S)
     env: dict[str, str] = Field(default_factory=dict, description="Extra environment.")

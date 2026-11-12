@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
@@ -116,7 +115,7 @@ def _suite_service(tmp_path: Path, apk_dir: Path, **overrides: object) -> QAServ
         "sys.exit(1)\n"
     )
     suite = TestSuiteConfig(
-        argv=(sys.executable, str(script)), cwd=tmp_path, junit_xml=Path("report.xml")
+        argv=("{python}", str(script)), cwd=tmp_path, junit_xml=Path("report.xml")
     )
     settings = Settings(
         backend="fake",

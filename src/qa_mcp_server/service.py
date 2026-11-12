@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import sys
 import time
 from datetime import UTC, datetime
 from fnmatch import fnmatchcase
@@ -38,6 +39,9 @@ from qa_mcp_server.validation import (
     level_at_least,
     resolve_apk_path,
 )
+
+# A suite argv entry equal to this is replaced by the server's own interpreter.
+PYTHON_PLACEHOLDER = "{python}"
 
 _THREADTIME_RE = re.compile(
     r"^(?P<ts>\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\s+(?P<pid>\d+)\s+(?P<tid>\d+)\s+"
@@ -341,7 +345,7 @@ class QAService:
         env = dict(suite.env)
         if req.serial is not None:
             env["ANDROID_SERIAL"] = self.resolve_serial(req.serial)
-        argv = tuple(suite.argv)
+        argv = tuple(sys.executable if arg == PYTHON_PLACEHOLDER else arg for arg in suite.argv)
         record_command(f"test_suite:{req.name}", argv, executed=not self.settings.dry_run)
         if self.settings.dry_run:
             return SuiteResult(
