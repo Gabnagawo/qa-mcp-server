@@ -1,0 +1,59 @@
+{
+  "devices": [
+    {"serial": "emulator-5554", "state": "device", "model": "sdk_gphone64_x86_64", "product": "sdk_gphone64_x86_64", "transport_id": "1"},
+    {"serial": "R5CT0000FAKE", "state": "offline", "model": "offline_test_phone", "product": "offline_test_phone", "transport_id": "2"}
+  ],
+  "packages": {
+    "org.qamcp.sample.notes": {
+      "installed": false,
+      "launcher_activity": ".MainActivity",
+      "activities": [".MainActivity", ".EditorActivity"],
+      "start_screen": "notes_empty",
+      "pid": 4242,
+      "launch_time_ms": 412,
+      "launch_logcat": [
+        "11-12 10:15:03.118  1234  1290 I ActivityManager: Start proc {pid}:org.qamcp.sample.notes/u0a190 for top-activity {org.qamcp.sample.notes/org.qamcp.sample.notes.MainActivity}",
+        "11-12 10:15:03.402  {pid}  {pid} I NotesRepository: Loaded 0 notes in 12 ms",
+        "11-12 10:15:03.530  {pid}  {pid} W StrictMode: StrictMode policy violation; ~duration=18 ms: android.os.strictmode.DiskReadViolation",
+        "11-12 10:15:03.531  1234  1290 I ActivityManager: Displayed org.qamcp.sample.notes/.MainActivity: +412ms"
+      ]
+    },
+    "com.android.settings": {
+      "installed": true,
+      "launcher_activity": ".Settings",
+      "activities": [".Settings"],
+      "pid": 2100
+    }
+  },
+  "apks": {"sample-notes-1.0.apk": "org.qamcp.sample.notes"},
+  "home_screen": "launcher",
+  "screens": {
+    "launcher": "launcher.xml",
+    "notes_empty": "notes_empty.xml",
+    "editor": "editor.xml",
+    "notes_list": "notes_list.xml",
+    "crash_dialog": "crash_dialog.xml"
+  },
+  "transitions": [
+    {"screen": "launcher", "content_desc": "Sample Notes", "launch": "org.qamcp.sample.notes", "to": "notes_empty"},
+    {"screen": "notes_empty", "resource_id": "org.qamcp.sample.notes:id/fab_new_note", "to": "editor"},
+    {"screen": "notes_list", "resource_id": "org.qamcp.sample.notes:id/fab_new_note", "to": "editor"},
+    {"screen": "editor", "content_desc": "Navigate up", "back": true},
+    {"screen": "editor", "resource_id": "org.qamcp.sample.notes:id/save_button", "to": "notes_list",
+     "logcat": ["11-12 10:16:20.884  {pid}  {pid} D NotesRepository: Inserted note id=1"]},
+    {"screen": "editor", "resource_id": "org.qamcp.sample.notes:id/export_button", "to": "crash_dialog", "crash": "org.qamcp.sample.notes",
+     "logcat": [
+       "11-12 10:16:41.502  {pid}  {pid} E AndroidRuntime: FATAL EXCEPTION: main",
+       "11-12 10:16:41.502  {pid}  {pid} E AndroidRuntime: Process: org.qamcp.sample.notes, PID: {pid}",
+       "11-12 10:16:41.502  {pid}  {pid} E AndroidRuntime: java.lang.NullPointerException: Attempt to invoke virtual method 'java.io.File android.content.Context.getExternalFilesDir(java.lang.String)' on a null object reference",
+       "11-12 10:16:41.502  {pid}  {pid} E AndroidRuntime: \tat org.qamcp.sample.notes.export.PdfExporter.export(PdfExporter.kt:42)",
+       "11-12 10:16:41.502  {pid}  {pid} E AndroidRuntime: \tat org.qamcp.sample.notes.EditorActivity.onExportClicked(EditorActivity.kt:118)",
+       "11-12 10:16:41.502  {pid}  {pid} E AndroidRuntime: \tat android.view.View.performClick(View.java:7659)",
+       "11-12 10:16:41.530  1234  1290 W ActivityManager:   Force finishing activity org.qamcp.sample.notes/.EditorActivity",
+       "11-12 10:16:41.611  1234  1305 I ActivityManager: Process org.qamcp.sample.notes (pid {pid}) has died: fg  TOP"
+     ]},
+    {"screen": "crash_dialog", "text": "Close app", "to": "launcher"}
+  ],
+  "logcat": "logcat.txt",
+  "screenshot": "screen.png"
+}

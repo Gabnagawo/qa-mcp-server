@@ -1,0 +1,6 @@
+11-12 10:14:58.003  1234  1290 I ActivityManager: Start proc 3900:com.android.launcher3/u0a120 for top-activity {com.android.launcher3/com.android.launcher3.uioverrides.QuickstepLauncher}
+11-12 10:14:58.410  3900  3900 D Launcher: onResume: workspace ready, 2 shortcuts
+11-12 10:14:59.120   612   640 W audio_hw_generic: Not supplying enough data to HAL, expected position 1043, only wrote 960
+11-12 10:15:00.051  1234  1305 I PackageManager: Package org.qamcp.sample.notes not found, skipping restore
+11-12 10:15:00.774  1234  1259 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_REPLACED } to com.android.vending
+11-12 10:15:01.002   880   912 E netmgr  : qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
