@@ -128,4 +128,7 @@ tests/test_security_matrix.py::test_package_outside_allowed_packages_rejected PA
 
 =========================== short test summary info ===========================
 SKIPPED [1] tests\test_security_matrix.py:195: symlinks not permitted on this system
-======================= 118 passed, 1 skipped in 3.26s ========================
+======================= 118 passed, 1 skipped in 3.25s ========================
+$ uv run pytest -m security -q --no-cov
+SKIPPED [1] tests\test_security_matrix.py:195: symlinks not permitted on this system
+124 passed, 1 skipped, 116 deselected in 4.03s
