@@ -92,10 +92,16 @@ class OllamaProvider:
         base_url: str = "http://localhost:11434",
         client: httpx.Client | None = None,
         timeout_s: float = 300.0,
+        num_ctx: int = 16384,
+        retries: int = 1,
     ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
         self.client = client or httpx.Client(timeout=timeout_s)
+        # Ollama defaults to a small context window; an exploratory session with UI dumps
+        # outgrows it within a few steps.
+        self.num_ctx = num_ctx
+        self.retries = retries
 
     def chat(self, system: str, messages: list[Message], tools: list[ToolSpec]) -> AssistantTurn:
         wire: list[dict[str, Any]] = [{"role": "system", "content": system}]
@@ -128,9 +134,12 @@ class OllamaProvider:
             ],
             "stream": False,
             "think": False,
-            "options": {"temperature": 0, "seed": 7},
+            "options": {"temperature": 0, "seed": 7, "num_ctx": self.num_ctx},
         }
-        response = self.client.post(f"{self.base_url}/api/chat", json=payload)
+        for attempt in range(self.retries + 1):
+            response = self.client.post(f"{self.base_url}/api/chat", json=payload)
+            if response.status_code < 500 or attempt == self.retries:
+                break
         response.raise_for_status()
         message = response.json().get("message", {})
         calls = []
@@ -267,6 +276,7 @@ def provider_from_env(env: Mapping[str, str] | None = None) -> ChatProvider:
         return OllamaProvider(
             model=model or DEFAULT_MODELS["ollama"],
             base_url=env.get("OLLAMA_HOST", "http://localhost:11434"),
+            num_ctx=int(env.get("OLLAMA_NUM_CTX", "16384")),
         )
     if kind == "anthropic":
         return AnthropicProvider(model=model or DEFAULT_MODELS["anthropic"])
@@ -280,7 +290,12 @@ def provider_from_env(env: Mapping[str, str] | None = None) -> ChatProvider:
 def render_tool_result(result: CallToolResult) -> str:
     """Flatten a tool result to text for the model; images are summarised, not inlined."""
     parts = []
+    if result.structuredContent is not None and not result.isError:
+        # Compact JSON: the pretty-printed text block costs roughly twice the tokens.
+        parts.append(json.dumps(result.structuredContent, separators=(",", ":")))
     for block in result.content:
+        if parts and result.structuredContent is not None:
+            break
         if isinstance(block, TextContent):
             parts.append(block.text)
         elif isinstance(block, ImageContent):

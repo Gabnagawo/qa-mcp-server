@@ -130,6 +130,7 @@ def test_ollama_provider_wire_format() -> None:
     assert turn.tool_calls[1].arguments == {"compact": False}
     assert captured["model"] == "qwen3:8b"
     assert captured["think"] is False
+    assert captured["options"]["num_ctx"] == 16384
     roles = [m["role"] for m in captured["messages"]]
     assert roles == ["system", "user", "assistant", "tool", "tool"]
     assert captured["messages"][2]["tool_calls"][0]["function"]["name"] == "dump_ui"
@@ -181,8 +182,37 @@ def test_anthropic_provider_wire_format() -> None:
     assert captured["tools"][0]["input_schema"] == {"type": "object"}
 
 
+def test_ollama_retries_once_on_server_error() -> None:
+    statuses = iter([500, 200])
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        status = next(statuses)
+        return httpx.Response(status, json={"message": {"content": "ok"}} if status == 200 else {})
+
+    provider = OllamaProvider(client=httpx.Client(transport=httpx.MockTransport(handler)))
+    assert provider.chat("sys", HISTORY, TOOLS).text == "ok"
+
+    failing = OllamaProvider(
+        client=httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(503))),
+        retries=0,
+    )
+    with pytest.raises(httpx.HTTPStatusError):
+        failing.chat("sys", HISTORY, TOOLS)
+
+
+def test_render_prefers_compact_structured_content() -> None:
+    result = CallToolResult(
+        content=[TextContent(type="text", text='{\n  "a": 1\n}')],
+        structuredContent={"a": 1},
+    )
+    assert render_tool_result(result) == '{"a":1}'
+
+
 def test_provider_from_env() -> None:
-    ollama = provider_from_env({"OLLAMA_HOST": "http://gpu-box:11434/", "LLM_MODEL": "llama3.2"})
+    ollama = provider_from_env(
+        {"OLLAMA_HOST": "http://gpu-box:11434/", "LLM_MODEL": "llama3.2", "OLLAMA_NUM_CTX": "8192"}
+    )
+    assert ollama.num_ctx == 8192
     assert isinstance(ollama, OllamaProvider)
     assert ollama.base_url == "http://gpu-box:11434"
     assert ollama.model == "llama3.2"
