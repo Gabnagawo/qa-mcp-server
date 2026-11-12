@@ -1,0 +1,344 @@
+"""A minimal tool-calling agent loop that drives the MCP server.
+
+This is the reference *client*: it lists the server's tools, hands them to an
+LLM (Ollama by default, Anthropic or OpenAI optionally) and executes the tool
+calls the model asks for, until it answers without tools or runs out of steps.
+
+Provider selection uses ``LLM_PROVIDER=ollama|anthropic|openai`` and
+``LLM_MODEL``. The Anthropic and OpenAI SDKs are optional extras and are only
+imported when selected.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import uuid
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
+from typing import Any, Literal, Protocol
+
+import anyio.to_thread
+import httpx
+from mcp import ClientSession
+from mcp.types import CallToolResult, ImageContent, TextContent
+
+DEFAULT_MODELS = {"ollama": "qwen3:8b", "anthropic": "claude-sonnet-5-5"}
+MAX_TOOL_RESULT_CHARS = 6000
+
+SYSTEM_PROMPT = """\
+You are an exploratory tester driving a real Android device through tools.
+Rules:
+- Before interacting, call dump_ui to see the current screen. Never guess element names.
+- Prefer tap with resource_id, text or content_desc copied from dump_ui over raw x/y.
+- To type, tap the input field first, then call input_text.
+- After every risky action (save, export, delete, submit) call logcat with level "E"
+  to look for crashes (FATAL EXCEPTION) and call dump_ui to see what happened.
+- Keep going until the goal is covered, then stop calling tools and answer with a short
+  test report: steps performed, observed result, and any bug with its evidence
+  (logcat lines). Do not invent results you did not observe."""
+
+
+@dataclass(frozen=True)
+class ToolSpec:
+    name: str
+    description: str
+    parameters: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class ToolCall:
+    id: str
+    name: str
+    arguments: dict[str, Any]
+
+
+@dataclass
+class Message:
+    role: Literal["user", "assistant", "tool"]
+    content: str
+    tool_calls: list[ToolCall] = field(default_factory=list)
+    tool_call_id: str | None = None
+    name: str | None = None
+
+
+@dataclass(frozen=True)
+class AssistantTurn:
+    text: str
+    tool_calls: list[ToolCall]
+
+
+class ChatProvider(Protocol):
+    name: str
+    model: str
+
+    def chat(self, system: str, messages: list[Message], tools: list[ToolSpec]) -> AssistantTurn: ...
+
+
+def _new_id() -> str:
+    return "call_" + uuid.uuid4().hex[:12]
+
+
+class OllamaProvider:
+    """Ollama ``/api/chat`` with native tool calling. Zero cost, runs locally."""
+
+    name = "ollama"
+
+    def __init__(
+        self,
+        model: str = DEFAULT_MODELS["ollama"],
+        base_url: str = "http://localhost:11434",
+        client: httpx.Client | None = None,
+        timeout_s: float = 300.0,
+    ) -> None:
+        self.model = model
+        self.base_url = base_url.rstrip("/")
+        self.client = client or httpx.Client(timeout=timeout_s)
+
+    def chat(self, system: str, messages: list[Message], tools: list[ToolSpec]) -> AssistantTurn:
+        wire: list[dict[str, Any]] = [{"role": "system", "content": system}]
+        for msg in messages:
+            if msg.role == "tool":
+                wire.append({"role": "tool", "content": msg.content, "tool_name": msg.name})
+            elif msg.role == "assistant":
+                entry: dict[str, Any] = {"role": "assistant", "content": msg.content}
+                if msg.tool_calls:
+                    entry["tool_calls"] = [
+                        {"function": {"name": c.name, "arguments": c.arguments}}
+                        for c in msg.tool_calls
+                    ]
+                wire.append(entry)
+            else:
+                wire.append({"role": "user", "content": msg.content})
+        payload = {
+            "model": self.model,
+            "messages": wire,
+            "tools": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": t.name,
+                        "description": t.description,
+                        "parameters": t.parameters,
+                    },
+                }
+                for t in tools
+            ],
+            "stream": False,
+            "think": False,
+            "options": {"temperature": 0, "seed": 7},
+        }
+        response = self.client.post(f"{self.base_url}/api/chat", json=payload)
+        response.raise_for_status()
+        message = response.json().get("message", {})
+        calls = []
+        for raw in message.get("tool_calls") or []:
+            fn = raw.get("function", {})
+            args = fn.get("arguments") or {}
+            if isinstance(args, str):
+                args = json.loads(args)
+            calls.append(ToolCall(id=_new_id(), name=fn.get("name", ""), arguments=args))
+        return AssistantTurn(text=message.get("content", "") or "", tool_calls=calls)
+
+
+class OpenAIProvider:
+    """OpenAI chat completions with function tools (``pip install qa-mcp-server[openai]``)."""
+
+    name = "openai"
+
+    def __init__(self, model: str, client: Any | None = None) -> None:
+        if client is None:
+            import openai  # lazy optional import
+
+            client = openai.OpenAI()
+        self.model = model
+        self.client = client
+
+    def chat(self, system: str, messages: list[Message], tools: list[ToolSpec]) -> AssistantTurn:
+        wire: list[dict[str, Any]] = [{"role": "system", "content": system}]
+        for msg in messages:
+            if msg.role == "tool":
+                wire.append(
+                    {"role": "tool", "tool_call_id": msg.tool_call_id, "content": msg.content}
+                )
+            elif msg.role == "assistant":
+                entry: dict[str, Any] = {"role": "assistant", "content": msg.content or None}
+                if msg.tool_calls:
+                    entry["tool_calls"] = [
+                        {
+                            "id": c.id,
+                            "type": "function",
+                            "function": {"name": c.name, "arguments": json.dumps(c.arguments)},
+                        }
+                        for c in msg.tool_calls
+                    ]
+                wire.append(entry)
+            else:
+                wire.append({"role": "user", "content": msg.content})
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=wire,
+            tools=[
+                {
+                    "type": "function",
+                    "function": {
+                        "name": t.name,
+                        "description": t.description,
+                        "parameters": t.parameters,
+                    },
+                }
+                for t in tools
+            ],
+        )
+        message = response.choices[0].message
+        calls = [
+            ToolCall(
+                id=c.id, name=c.function.name, arguments=json.loads(c.function.arguments or "{}")
+            )
+            for c in message.tool_calls or []
+        ]
+        return AssistantTurn(text=message.content or "", tool_calls=calls)
+
+
+class AnthropicProvider:
+    """Anthropic Messages API with tool use (``pip install qa-mcp-server[anthropic]``)."""
+
+    name = "anthropic"
+
+    def __init__(
+        self, model: str = DEFAULT_MODELS["anthropic"], client: Any | None = None
+    ) -> None:
+        if client is None:
+            import anthropic  # lazy optional import
+
+            client = anthropic.Anthropic()
+        self.model = model
+        self.client = client
+
+    def chat(self, system: str, messages: list[Message], tools: list[ToolSpec]) -> AssistantTurn:
+        wire: list[dict[str, Any]] = []
+        for msg in messages:
+            if msg.role == "tool":
+                block = {
+                    "type": "tool_result",
+                    "tool_use_id": msg.tool_call_id,
+                    "content": msg.content,
+                }
+                # Consecutive tool results must share one user turn.
+                if wire and wire[-1]["role"] == "user" and isinstance(wire[-1]["content"], list):
+                    wire[-1]["content"].append(block)
+                else:
+                    wire.append({"role": "user", "content": [block]})
+            elif msg.role == "assistant":
+                content: list[dict[str, Any]] = []
+                if msg.content:
+                    content.append({"type": "text", "text": msg.content})
+                content.extend(
+                    {"type": "tool_use", "id": c.id, "name": c.name, "input": c.arguments}
+                    for c in msg.tool_calls
+                )
+                wire.append({"role": "assistant", "content": content})
+            else:
+                wire.append({"role": "user", "content": msg.content})
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=2048,
+            system=system,
+            messages=wire,
+            tools=[
+                {"name": t.name, "description": t.description, "input_schema": t.parameters}
+                for t in tools
+            ],
+        )
+        text = "".join(b.text for b in response.content if b.type == "text")
+        calls = [
+            ToolCall(id=b.id, name=b.name, arguments=dict(b.input))
+            for b in response.content
+            if b.type == "tool_use"
+        ]
+        return AssistantTurn(text=text, tool_calls=calls)
+
+
+def provider_from_env(env: Mapping[str, str] | None = None) -> ChatProvider:
+    env = os.environ if env is None else env
+    kind = env.get("LLM_PROVIDER", "ollama").strip().lower()
+    model = env.get("LLM_MODEL", "").strip()
+    if kind == "ollama":
+        return OllamaProvider(
+            model=model or DEFAULT_MODELS["ollama"],
+            base_url=env.get("OLLAMA_HOST", "http://localhost:11434"),
+        )
+    if kind == "anthropic":
+        return AnthropicProvider(model=model or DEFAULT_MODELS["anthropic"])
+    if kind == "openai":
+        if not model:
+            raise ValueError("LLM_PROVIDER=openai needs LLM_MODEL")
+        return OpenAIProvider(model=model)
+    raise ValueError(f"unknown LLM_PROVIDER {kind!r} (expected ollama, anthropic or openai)")
+
+
+def render_tool_result(result: CallToolResult) -> str:
+    """Flatten a tool result to text for the model; images are summarised, not inlined."""
+    parts = []
+    for block in result.content:
+        if isinstance(block, TextContent):
+            parts.append(block.text)
+        elif isinstance(block, ImageContent):
+            parts.append(f"[{block.mimeType} image, {len(block.data) * 3 // 4} bytes, not shown]")
+    text = "\n".join(parts)
+    if result.isError:
+        text = "ERROR: " + text
+    if len(text) > MAX_TOOL_RESULT_CHARS:
+        text = text[:MAX_TOOL_RESULT_CHARS] + f"... [truncated, {len(text)} chars]"
+    return text
+
+
+@dataclass
+class StepRecord:
+    tool: str
+    arguments: dict[str, Any]
+    is_error: bool
+    result_preview: str
+
+
+@dataclass
+class ExplorationReport:
+    provider: str
+    model: str
+    steps: list[StepRecord]
+    final_answer: str
+    stopped_reason: Literal["answered", "max_steps"]
+
+
+async def explore(
+    session: ClientSession,
+    provider: ChatProvider,
+    goal: str,
+    *,
+    max_steps: int = 20,
+    on_step: Callable[[StepRecord], None] | None = None,
+) -> ExplorationReport:
+    """Run the agent loop until the model answers without tool calls or ``max_steps``."""
+    listed = await session.list_tools()
+    specs = [
+        ToolSpec(name=t.name, description=t.description or "", parameters=t.inputSchema)
+        for t in listed.tools
+    ]
+    messages = [Message(role="user", content=goal)]
+    steps: list[StepRecord] = []
+    for _ in range(max_steps):
+        turn = await anyio.to_thread.run_sync(provider.chat, SYSTEM_PROMPT, messages, specs)
+        messages.append(Message(role="assistant", content=turn.text, tool_calls=turn.tool_calls))
+        if not turn.tool_calls:
+            return ExplorationReport(provider.name, provider.model, steps, turn.text, "answered")
+        for call in turn.tool_calls:
+            result = await session.call_tool(call.name, call.arguments)
+            text = render_tool_result(result)
+            record = StepRecord(call.name, call.arguments, bool(result.isError), text[:400])
+            steps.append(record)
+            if on_step is not None:
+                on_step(record)
+            messages.append(
+                Message(role="tool", content=text, tool_call_id=call.id, name=call.name)
+            )
+    return ExplorationReport(provider.name, provider.model, steps, "", "max_steps")
