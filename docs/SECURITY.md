@@ -49,6 +49,33 @@ test suites). Use it to watch what an agent would do before letting it act.
 A rejection at any layer raises before anything executes. The audit log records
 it as `rejected`, separately from operational `error`s.
 
+## The allowlist
+
+Output of `uv run qa-mcp-server allowlist`. These are the only adb invocations
+the server can make. `<placeholders>` are checked by predicates (serial regex,
+package regex, `package/activity`, integer 0..10000, `KEYCODE_` + allowlisted
+name, absolute `.apk` path, line count 1..100000, `--pid=<digits>`).
+
+```text
+devices           read-only  adb devices -l
+install           mutating   adb -s <serial> install -r <apk>
+am_start          mutating   adb -s <serial> shell am start -W -n <component>
+pm_path           read-only  adb -s <serial> shell pm path <package>
+resolve_launcher  read-only  adb -s <serial> shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER <package>
+pidof             read-only  adb -s <serial> shell pidof <package>
+screencap         read-only  adb -s <serial> exec-out screencap -p
+ui_dump           read-only  adb -s <serial> exec-out uiautomator dump /dev/tty
+tap               mutating   adb -s <serial> shell input tap <coord> <coord>
+input_text        mutating   adb -s <serial> shell input text <text>
+keyevent          mutating   adb -s <serial> shell input keyevent <keycode>
+logcat            read-only  adb -s <serial> logcat -d -v threadtime -t <lines>
+logcat_pid        read-only  adb -s <serial> logcat -d -v threadtime -t <lines> <pid>
+```
+
+There is deliberately no `uninstall`, `pull`, `push`, `root`, `reboot`,
+`forward`, `pm clear`, `settings put`, `am broadcast`, `swipe` or free-form
+`shell`.
+
 ## Residual risk (what this does not solve)
 
 - **Allowed actions are still powerful.** `tap`, `input_text` and `press_key`
