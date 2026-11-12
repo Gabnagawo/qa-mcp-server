@@ -120,6 +120,7 @@ class OllamaProvider:
         timeout_s: float = 300.0,
         num_ctx: int = 16384,
         retries: int = 1,
+        think: bool = False,
     ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
@@ -128,6 +129,7 @@ class OllamaProvider:
         # outgrows it within a few steps.
         self.num_ctx = num_ctx
         self.retries = retries
+        self.think = think
 
     def chat(self, system: str, messages: list[Message], tools: list[ToolSpec]) -> AssistantTurn:
         wire: list[dict[str, Any]] = [{"role": "system", "content": system}]
@@ -159,7 +161,7 @@ class OllamaProvider:
                 for t in tools
             ],
             "stream": False,
-            "think": False,
+            "think": self.think,
             # Qwen3 loops under greedy decoding; use its recommended non-thinking sampling,
             # seeded, with a cap on generated tokens.
             "options": {
@@ -320,6 +322,7 @@ def provider_from_env(env: Mapping[str, str] | None = None) -> ChatProvider:
             model=model or DEFAULT_MODELS["ollama"],
             base_url=env.get("OLLAMA_HOST", "http://localhost:11434"),
             num_ctx=int(env.get("OLLAMA_NUM_CTX", "16384")),
+            think=env.get("OLLAMA_THINK", "false").strip().lower() in {"1", "true", "yes"},
         )
     if kind == "anthropic":
         return AnthropicProvider(model=model or DEFAULT_MODELS["anthropic"])

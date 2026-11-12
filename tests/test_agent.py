@@ -226,6 +226,10 @@ def test_provider_from_env() -> None:
         {"OLLAMA_HOST": "http://gpu-box:11434/", "LLM_MODEL": "llama3.2", "OLLAMA_NUM_CTX": "8192"}
     )
     assert ollama.num_ctx == 8192
+    assert ollama.think is False
+    thinking = provider_from_env({"OLLAMA_THINK": "true"})
+    assert isinstance(thinking, OllamaProvider)
+    assert thinking.think is True
     assert isinstance(ollama, OllamaProvider)
     assert ollama.base_url == "http://gpu-box:11434"
     assert ollama.model == "llama3.2"
