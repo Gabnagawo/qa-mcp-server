@@ -181,6 +181,7 @@ class TapRequest(_Request):
 class InputTextRequest(_Request):
     text: Annotated[str, StringConstraints(pattern=INPUT_TEXT_RE)]
     serial: Serial | None = None
+    require_focus: bool = True
 
     @model_validator(mode="after")
     def _no_leading_dash(self) -> InputTextRequest:

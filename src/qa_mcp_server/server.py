@@ -299,9 +299,13 @@ def build_server(
             ),
         ],
         serial: Serial | None = None,
+        require_focus: Annotated[
+            bool,
+            Field(description="Fail if no element has input focus (default). Tap the field first."),
+        ] = True,
     ) -> ActionResult:
-        """Type text into the focused field (tap the field first)."""
-        req = InputTextRequest(text=text, serial=serial)
+        """Type text into the focused field. Tap the field first; fails if nothing is focused."""
+        req = InputTextRequest(text=text, serial=serial, require_focus=require_focus)
         return await _offload(lambda: svc.input_text(req))
 
     @mcp.tool(annotations=DEVICE_ACTION)

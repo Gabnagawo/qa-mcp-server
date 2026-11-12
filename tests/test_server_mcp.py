@@ -60,8 +60,12 @@ async def test_full_exploratory_flow(
     tapped = data(await client.call_tool("tap", {"content_desc": "New note"}))
     assert tapped["matched"]["resource_id"].endswith("fab_new_note")
 
+    unfocused = await client.call_tool("input_text", {"text": "Groceries"})
+    assert unfocused.isError
+    assert "tap the field first" in str(unfocused.content)
     data(await client.call_tool("tap", {"resource_id": "title_input"}))
-    data(await client.call_tool("input_text", {"text": "Groceries"}))
+    typed = data(await client.call_tool("input_text", {"text": "Groceries"}))
+    assert typed["detail"] == "typed 9 characters into org.qamcp.sample.notes:id/title_input"
     data(await client.call_tool("tap", {"text": "save", "match": "contains"}))
     after = json.dumps(data(await client.call_tool("dump_ui", {})))
     assert "Groceries" in after
@@ -81,9 +85,9 @@ async def test_full_exploratory_flow(
     assert tapped_xy["matched"] is None
 
     records = audit.read()
-    assert len(records) == 16
-    assert all(r["outcome"] == "ok" for r in records)
-    typed = next(r for r in records if r["tool"] == "input_text")
+    assert len(records) == 17
+    assert [r["outcome"] for r in records].count("error") == 1
+    typed = next(r for r in records if r["tool"] == "input_text" and r["outcome"] == "ok")
     assert typed["arguments"]["text"] == "<redacted 9 chars>"
     launch = next(r for r in records if r["tool"] == "launch_app")
     assert [c["rule"] for c in launch["commands"]] == [
@@ -137,7 +141,7 @@ async def test_dry_run_plans_but_does_not_execute(tmp_path: Path, apk_dir: Path)
         result = data(await session.call_tool("install_apk", {"apk_path": "sample-notes-1.0.apk"}))
         assert result == result | {"installed": False, "dry_run": True}
         data(await session.call_tool("tap", {"text": "Settings"}))
-        data(await session.call_tool("input_text", {"text": "hello"}))
+        data(await session.call_tool("input_text", {"text": "hello", "require_focus": False}))
     assert APP not in fake.state.installed
     assert not any("input" in call for call in fake.calls)
     records = server.audit.read()

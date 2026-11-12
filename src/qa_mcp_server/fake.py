@@ -347,4 +347,12 @@ class FakeAdbTransport:
             typed = self.state.typed.get(match.group(1))
             return escape(typed, {'"': "&quot;"}) if typed else (match.group(2) or "")
 
-        return _PLACEHOLDER_RE.sub(fill, self.screens[screen])
+        xml = _PLACEHOLDER_RE.sub(fill, self.screens[screen])
+        if self.state.focused and screen == self.state.screen:
+            # uiautomator reports input focus as focused="true" on the node.
+            pattern = re.compile(
+                r'(<node [^>]*resource-id="' + re.escape(self.state.focused) + r'"[^>]*?)'
+                r'focused="false"'
+            )
+            xml = pattern.sub(r'\g<1>focused="true"', xml, count=1)
+        return xml

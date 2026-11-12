@@ -24,7 +24,7 @@ from qa_mcp_server.audit import record_command
 from qa_mcp_server.config import Settings, TestSuiteConfig
 from qa_mcp_server.errors import CommandFailed, DeviceError, PolicyViolation
 from qa_mcp_server.transport import Transport
-from qa_mcp_server.uitree import find_nodes, parse_hierarchy, to_tree
+from qa_mcp_server.uitree import find_nodes, iter_nodes, parse_hierarchy, to_tree
 from qa_mcp_server.validation import (
     SERIAL_RE,
     DumpUiRequest,
@@ -322,11 +322,27 @@ class QAService:
 
     def input_text(self, req: InputTextRequest) -> ActionResult:
         serial = self.resolve_serial(req.serial)
+        target = ""
+        if req.require_focus:
+            # Without focus `input text` is silently dropped; fail loudly instead so the
+            # agent does not report text it never typed.
+            focused = [
+                n
+                for n in iter_nodes(parse_hierarchy(self.adb.ui_dump(serial)))
+                if "focused" in n.flags
+            ]
+            if not focused:
+                raise CommandFailed(
+                    "no focused input field on screen: tap the field first "
+                    "(or pass require_focus=false for views that do not report focus)"
+                )
+            node = focused[0]
+            target = f" into {node.resource_id or node.content_desc or node.cls}"
         result = self.adb.input_text(serial, req.encoded)
         return ActionResult(
             serial=serial,
             action="input_text",
-            detail=f"typed {len(req.text)} characters",
+            detail=f"typed {len(req.text)} characters{target}",
             dry_run=result.dry_run,
         )
 
