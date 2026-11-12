@@ -1,0 +1,31 @@
+provider=ollama model=qwen3:8b backend=fake
+  [ok ] list_devices() -> {   "devices": [     {       "serial": "emulator-5554",       "state": "device",       "model": "sdk_gphone64_x86_64",       "product": "sdk_gphone64_x86_64"   
+  [ok ] install_apk(apk_path='sample-notes-1.0.apk', serial='emulator-5554') -> {   "serial": "emulator-5554",   "apk": "sample-notes-1.0.apk",   "sha256": "a9f36ce9e26147bb58779ae0224220e1614a2f82cdeb560b974b12b6492b8a95",   "size_bytes": 
+  [ok ] launch_app(package='org.qamcp.sample.notes', serial='emulator-5554') -> {   "serial": "emulator-5554",   "component": "org.qamcp.sample.notes/.MainActivity",   "status": "ok",   "launch_state": "COLD",   "total_time_ms": 412,   "dry
+  [ok ] dump_ui(serial='emulator-5554') -> {   "serial": "emulator-5554",   "packages": [     "org.qamcp.sample.notes"   ],   "node_count": 7,   "total_nodes": 9,   "truncated": false,   "nodes": [     {
+  [ok ] tap(resource_id='org.qamcp.sample.notes:id/fab_new_note', serial='emulator-5554') -> {   "serial": "emulator-5554",   "x": 960,   "y": 2200,   "matched": {     "class": "FloatingActionButton",     "resource_id": "org.qamcp.sample.notes:id/fab_ne
+  [ok ] dump_ui(serial='emulator-5554') -> {   "serial": "emulator-5554",   "packages": [     "org.qamcp.sample.notes"   ],   "node_count": 9,   "total_nodes": 12,   "truncated": false,   "nodes": [     
+  [ok ] input_text(serial='emulator-5554', text='Groceries') -> {   "serial": "emulator-5554",   "action": "input_text",   "detail": "typed 9 characters",   "dry_run": false }
+  [ok ] tap(serial='emulator-5554', resource_id='org.qamcp.sample.notes:id/save_button') -> {   "serial": "emulator-5554",   "x": 886,   "y": 2250,   "matched": {     "class": "Button",     "text": "Save",     "resource_id": "org.qamcp.sample.notes:id/
+  [ok ] logcat(serial='emulator-5554', level='E') -> {   "serial": "emulator-5554",   "entries": [     {       "ts": "11-12 10:15:01.002",       "pid": 880,       "tid": 912,       "level": "E",       "tag": "netm
+  [ok ] dump_ui(serial='emulator-5554') -> {   "serial": "emulator-5554",   "packages": [     "org.qamcp.sample.notes"   ],   "node_count": 10,   "total_nodes": 12,   "truncated": false,   "nodes": [    
+
+stopped: answered after 10 tool calls
+
+The test steps performed were:
+
+1. Tapped on the "New note" floating action button to create a new note.
+2. Typed "Groceries" into the title input field.
+3. Tapped on the "Save" button to save the note.
+4. Checked for any crashes using `logcat` with level "E".
+5. Dumped the UI to verify the result after saving.
+
+Observed Result:
+- The note was saved, and a "Note saved" snackbar appeared.
+- The UI updated to show the new note in the list.
+
+No crashes were found in the logcat output. The test was successful, and the note was saved correctly.
+
+real	1m52.272s
+user	0m0.000s
+sys	0m0.015s
