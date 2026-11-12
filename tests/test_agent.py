@@ -202,8 +202,15 @@ def test_ollama_retries_once_on_server_error() -> None:
         status = next(statuses)
         return httpx.Response(status, json={"message": {"content": "ok"}} if status == 200 else {})
 
-    provider = OllamaProvider(client=httpx.Client(transport=httpx.MockTransport(handler)))
+    seeds: list[int] = []
+
+    def recording(request: httpx.Request) -> httpx.Response:
+        seeds.append(json.loads(request.content)["options"]["seed"])
+        return handler(request)
+
+    provider = OllamaProvider(client=httpx.Client(transport=httpx.MockTransport(recording)))
     assert provider.chat("sys", HISTORY, TOOLS).text == "ok"
+    assert seeds == [7, 8]
 
     failing = OllamaProvider(
         client=httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(503))),

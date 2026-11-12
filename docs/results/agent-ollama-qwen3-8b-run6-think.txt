@@ -1,0 +1,9 @@
+provider=ollama model=qwen3:8b backend=fake
+
+stopped: provider_error after 0 tool calls
+
+provider error: Ollama returned 500: {"error":"prediction aborted, token repeat limit reached"}
+
+real	1m6.317s
+user	0m0.000s
+sys	0m0.015s

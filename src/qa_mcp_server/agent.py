@@ -119,7 +119,7 @@ class OllamaProvider:
         client: httpx.Client | None = None,
         timeout_s: float = 300.0,
         num_ctx: int = 16384,
-        retries: int = 1,
+        retries: int = 2,
         think: bool = False,
     ) -> None:
         self.model = model
@@ -174,6 +174,9 @@ class OllamaProvider:
             },
         }
         for attempt in range(self.retries + 1):
+            # A new seed per attempt: with the same seed a degenerate sample (Ollama's
+            # "token repeat limit reached") would simply repeat.
+            payload["options"]["seed"] = 7 + attempt
             response = self.client.post(f"{self.base_url}/api/chat", json=payload)
             if response.status_code < 500 or attempt == self.retries:
                 break
