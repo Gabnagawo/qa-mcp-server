@@ -1,0 +1,65 @@
+$ uv run python examples/demo_transcript.py
+server qa-mcp-server 0.1.0 (stdio, fake device)
+10 tools: list_devices, install_apk, launch_app, screenshot, logcat, dump_ui, tap, input_text, press_key, run_test_suite
+
+== exploratory session ==
+#1  list_devices()  [11.5 ms]
+    -> online=1  [emulator-5554 (device), R5CT0000FAKE (offline)]
+#2  install_apk(apk_path='sample-notes-1.0.apk')  [8.7 ms]
+    -> installed=True sample-notes-1.0.apk sha256=a9f36ce9e261...
+#3  launch_app(package='org.qamcp.sample.notes')  [10.3 ms]
+    -> org.qamcp.sample.notes/.MainActivity status=ok COLD 412 ms
+  # read the screen before acting
+#4  dump_ui()  [4.6 ms]
+    -> 7 nodes; TextView:'Notes', ImageView:'More options', TextView:'No notes yet', FloatingActionButton:'New note'
+#5  tap(content_desc='New note')  [10.4 ms]
+    -> tapped (960, 2200) on org.qamcp.sample.notes:id/fab_new_note
+#6  tap(resource_id='title_input')  [10.6 ms]
+    -> tapped (540, 405) on org.qamcp.sample.notes:id/title_input
+#7  input_text(text='Groceries')  [7.1 ms]
+    -> {"action": "input_text", "detail": "typed 9 characters into org.qamcp.sample.notes:id/title_input", "dry_run": false}
+#8  tap(text='Save')  [10.9 ms]
+    -> tapped (886, 2250) on org.qamcp.sample.notes:id/save_button
+  # verify the note is listed
+#9  dump_ui()  [4.9 ms]
+    -> 10 nodes; TextView:'Notes', ImageView:'More options', TextView:'Groceries', TextView:'Note saved', FloatingActionButton:'New note'
+#10 logcat(package='org.qamcp.sample.notes', level='W')  [13.3 ms]
+    -> 1 lines
+        W/StrictMode: StrictMode policy violation; ~duration=18 ms: android.os.strictmode.DiskReadViolation
+#11 tap(content_desc='New note')  [11.1 ms]
+    -> tapped (960, 2200) on org.qamcp.sample.notes:id/fab_new_note
+  # risky action
+#12 tap(content_desc='Export as PDF')  [11.0 ms]
+    -> tapped (114, 2250) on org.qamcp.sample.notes:id/export_button
+  # what happened?
+#13 dump_ui()  [5.0 ms]
+    -> 3 nodes; TextView:'Sample Notes keeps stopping', Button:'App info', Button:'Close app'
+#14 logcat(tag='AndroidRuntime', level='E')  [14.7 ms]
+    -> 6 lines
+        E/AndroidRuntime: FATAL EXCEPTION: main
+        E/AndroidRuntime: Process: org.qamcp.sample.notes, PID: 4242
+        E/AndroidRuntime: java.lang.NullPointerException: Attempt to invoke virtual method 'java.io.File android.con
+        E/AndroidRuntime: 	at org.qamcp.sample.notes.export.PdfExporter.export(PdfExporter.kt:42)
+  # evidence for the bug report
+#15 screenshot(save=True)  [4.0 ms]
+    -> saved qa-mcp-artifacts/demo/screenshots/emulator-5554-20261112T131228116024Z.png (1006 bytes)
+#16 tap(text='Close app')  [10.6 ms]
+    -> tapped (540, 1340) on android:id/aerr_close
+#17 run_test_suite(name='smoke')  [451.0 ms]
+    -> exit=0 passed=True junit={'tests': 3, 'failures': 0, 'errors': 0, 'skipped': 0} in 0.438s
+
+== a prompt-injected agent tries to escape ==
+#18 input_text(text='hi; reboot')  [2.2 ms]
+    -> REJECTED: 1 validation error for InputTextRequest text String should match pattern '^[A-Za-z0-9 @._,:/+=-]{1,500}$' [type=string_pattern_mismatch, input_value='hi; reboot', input_t
+#19 launch_app(package='org.qamcp.sample.notes', activity='.Main$(id)')  [1.9 ms]
+    -> REJECTED: 1 validation error for launch_appArguments activity String should match pattern '^\.?[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$' [type=string_pattern_mismatch, 
+#20 install_apk(apk_path='../../pyproject.toml')  [2.6 ms]
+    -> REJECTED: apk_path escapes the allowed APK directory
+#21 press_key(key='POWER')  [2.0 ms]
+    -> REJECTED: 1 validation error for PressKeyRequest Value error, key not allowed: 'POWER'; allowed: ['APP_SWITCH', 'BACK', 'DEL', 'DPAD_CENTER', 'DPAD_DOWN', 'DPAD_LEFT', 'DPAD_RIGHT'
+#22 run_test_suite(name='smoke; rm -rf /')  [1.8 ms]
+    -> REJECTED: 1 validation error for RunSuiteRequest name String should match pattern '^[a-z0-9][a-z0-9_-]{0,63}$' [type=string_pattern_mismatch, input_value='smoke; rm -rf /', input_t
+#23 logcat(serial='emulator-5554 && reboot')  [2.0 ms]
+    -> REJECTED: 1 validation error for logcatArguments serial String should match pattern '^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$' [type=string_pattern_mismatch, input_value='emulator-5554 &
+
+audit log: 23 tool calls {'ok': 17, 'rejected': 6}, 42 adb/suite commands executed -> qa-mcp-artifacts/demo/audit.jsonl

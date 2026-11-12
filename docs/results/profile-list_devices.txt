@@ -1,0 +1,6 @@
+$ uv run python examples/profile_call.py
+100 list_devices calls, in-process, under cProfile: self-time 2.441s
+  jsonschema/referencing (MCP SDK output-schema validation): 1.228s
+    = 50% of the total
+  qa_mcp_server code (validation, policy, fake adb, parsing, audit): 0.012s
+    = 0.5% of the total

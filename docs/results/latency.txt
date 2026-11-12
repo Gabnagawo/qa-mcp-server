@@ -1,0 +1,34 @@
+$ uv run python examples/benchmark_latency.py --iterations 200
+qa-mcp-server 0.1.0 | Python 3.12.10 | Windows 11 | AMD64 Family 23 Model 96 Stepping 1, AuthenticAMD
+
+transport=memory iterations=200 per tool (ms)
+tool call                            p50     p95    mean     max
+list_devices()                      9.90   11.01   10.04   13.91
+install_apk(apk_path)               8.27    9.41    8.27   16.04
+launch_app(package)                 9.08   11.69    9.47   13.03
+dump_ui()                           3.26    3.81    3.35    9.39
+tap(x,y)                           10.13   13.05   10.64   18.50
+tap(content_desc)                  10.29   13.05   10.73   14.65
+input_text(text)                    5.72    7.11    5.91   12.52
+press_key(key)                      5.08    6.59    5.31    7.42
+logcat(level)                      14.11   17.09   14.51   18.71
+logcat(package)                    13.62   17.20   14.12   18.89
+screenshot()                        1.42    2.24    1.53    3.42
+rejected input_text                 1.03    1.36    1.06    1.73
+ALL (2400 calls)                    8.81   15.11    7.91   18.89
+
+transport=stdio iterations=200 per tool (ms)
+tool call                            p50     p95    mean     max
+list_devices()                     12.50   13.86   12.52   15.37
+install_apk(apk_path)               9.27   10.83    9.34   11.65
+launch_app(package)                11.28   13.29   11.31   14.40
+dump_ui()                           4.90    6.53    5.09    7.55
+tap(x,y)                           10.84   12.49   11.04   16.08
+tap(content_desc)                  11.13   12.64   11.33   14.94
+input_text(text)                    6.63    8.07    6.78    9.23
+press_key(key)                      6.30    7.66    6.45   13.68
+logcat(level)                      14.58   17.08   14.86   21.03
+logcat(package)                    14.42   16.98   14.76   18.89
+screenshot()                        2.62    3.18    2.68    8.84
+rejected input_text                 2.13    2.49    2.14    2.69
+ALL (2400 calls)                   10.10   15.00    9.03   21.03

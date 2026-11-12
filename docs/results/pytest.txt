@@ -1,0 +1,48 @@
+$ uv run pytest
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.2.0, pluggy-1.7.0
+rootdir: C:\dev\ai-portfolio\qa-mcp-server
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.16.0, cov-7.1.0
+collected 236 items
+
+tests\test_adb_fake.py ...............                                   [  6%]
+tests\test_agent.py ........                                             [  9%]
+tests\test_cli.py .......                                                [ 12%]
+tests\test_policy.py ...................                                 [ 20%]
+tests\test_security_matrix.py .......................................... [ 38%]
+..........s............................................................. [ 69%]
+.....                                                                    [ 71%]
+tests\test_server_mcp.py .........                                       [ 75%]
+tests\test_service.py ............                                       [ 80%]
+tests\test_transport.py .......                                          [ 83%]
+tests\test_uitree.py ................                                    [ 89%]
+tests\test_validation_config.py ........................                 [100%]
+
+=============================== tests coverage ================================
+______________ coverage: platform win32, python 3.12.10-final-0 _______________
+
+Name                              Stmts   Miss Branch BrPart  Cover   Missing
+-----------------------------------------------------------------------------
+src\qa_mcp_server\__init__.py         2      0      0      0   100%
+src\qa_mcp_server\__main__.py         2      2      0      0     0%   3-5
+src\qa_mcp_server\adb.py            119      0     28      0   100%
+src\qa_mcp_server\agent.py          176      0     58      4    98%   107->112, 168->177, 234->236, 286->283
+src\qa_mcp_server\audit.py           51      0     10      0   100%
+src\qa_mcp_server\cli.py             77      0     10      0   100%
+src\qa_mcp_server\config.py          80      1     18      3    96%   64->63, 66, 143->142
+src\qa_mcp_server\errors.py           7      0      0      0   100%
+src\qa_mcp_server\fake.py           242      1     86      5    98%   250->252, 272->274, 282, 312->314, 328->exit
+src\qa_mcp_server\policy.py          86      1     38      1    98%   61
+src\qa_mcp_server\server.py         107      0     10      0   100%
+src\qa_mcp_server\service.py        245      3     64      3    98%   166, 204, 410
+src\qa_mcp_server\transport.py       79      0     12      0   100%
+src\qa_mcp_server\uitree.py         130      2     50      2    98%   48, 124
+src\qa_mcp_server\validation.py     151      1     34      1    99%   237
+-----------------------------------------------------------------------------
+TOTAL                              1554     11    418     19    98%
+Required test coverage of 80% reached. Total coverage: 98.48%
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_security_matrix.py:195: symlinks not permitted on this system
+======================= 235 passed, 1 skipped in 10.02s =======================
