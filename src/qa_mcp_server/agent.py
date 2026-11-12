@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
@@ -75,6 +76,31 @@ class ChatProvider(Protocol):
     def chat(
         self, system: str, messages: list[Message], tools: list[ToolSpec]
     ) -> AssistantTurn: ...
+
+
+_TEXT_TOOL_CALL_RE = re.compile(
+    r"(?:<tool_call>)?\s*(\{\s*\"name\".*?\})\s*</tool_call>", flags=re.DOTALL
+)
+
+
+def extract_text_tool_calls(text: str) -> tuple[str, list[ToolCall]]:
+    """Recover Hermes-style ``<tool_call>{...}</tool_call>`` blocks a model wrote as text.
+
+    Small local models sometimes print the tool call instead of emitting it through
+    the API, which would otherwise end the session as if it were the final answer.
+    """
+    calls = []
+    for match in _TEXT_TOOL_CALL_RE.finditer(text):
+        try:
+            data = json.loads(match.group(1))
+        except json.JSONDecodeError:
+            continue
+        if isinstance(data, dict) and isinstance(data.get("name"), str):
+            args = data.get("arguments") or {}
+            calls.append(ToolCall(id=_new_id(), name=data["name"], arguments=dict(args)))
+    if calls:
+        text = _TEXT_TOOL_CALL_RE.sub("", text).strip()
+    return text, calls
 
 
 def _new_id() -> str:
@@ -163,7 +189,10 @@ class OllamaProvider:
             if isinstance(args, str):
                 args = json.loads(args)
             calls.append(ToolCall(id=_new_id(), name=fn.get("name", ""), arguments=args))
-        return AssistantTurn(text=message.get("content", "") or "", tool_calls=calls)
+        text = message.get("content", "") or ""
+        if not calls:
+            text, calls = extract_text_tool_calls(text)
+        return AssistantTurn(text=text, tool_calls=calls)
 
 
 class OpenAIProvider:

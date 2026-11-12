@@ -20,6 +20,7 @@ from qa_mcp_server.agent import (
     ToolCall,
     ToolSpec,
     explore,
+    extract_text_tool_calls,
     provider_from_env,
     render_tool_result,
 )
@@ -247,3 +248,23 @@ def test_optional_sdks_are_lazy(monkeypatch: pytest.MonkeyPatch) -> None:
     assert anthropic.client == "anthropic-client"
     assert isinstance(openai, OpenAIProvider)
     assert openai.client == "openai-client"
+
+
+def test_extract_text_tool_calls() -> None:
+    text = 'angan\n{"name": "launch_app", "arguments": {"package": "a.b"}}\n</tool_call>'
+    rest, calls = extract_text_tool_calls(text)
+    assert rest == "angan"
+    assert [(c.name, c.arguments) for c in calls] == [("launch_app", {"package": "a.b"})]
+    tagged = '<tool_call>{"name": "dump_ui"}</tool_call><tool_call>{"name": broken}</tool_call>'
+    assert [c.name for c in extract_text_tool_calls(tagged)[1]] == ["dump_ui"]
+    assert extract_text_tool_calls("plain answer") == ("plain answer", [])
+
+
+def test_ollama_textual_tool_call_fallback() -> None:
+    body = {"message": {"content": '{"name": "list_devices", "arguments": {}}</tool_call>'}}
+    provider = OllamaProvider(
+        client=httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=body)))
+    )
+    turn = provider.chat("sys", HISTORY, TOOLS)
+    assert [c.name for c in turn.tool_calls] == ["list_devices"]
+    assert turn.text == ""
