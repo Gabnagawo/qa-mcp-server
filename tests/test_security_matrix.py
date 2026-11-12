@@ -119,10 +119,8 @@ def traversal_layout(apk_dir: Path) -> Path:
     (apk_dir / "not-a-zip.apk").write_text("plain text pretending to be an APK")
     (apk_dir / "wrong-extension.zip").write_bytes(b"PK\x03\x04 zip")
     for name in ("evil;id.apk", "evil name.apk"):
-        try:
+        with contextlib.suppress(OSError):  # filesystem without these characters
             (apk_dir / name).write_bytes(b"PK\x03\x04 bad name")
-        except OSError:  # pragma: no cover - filesystem without these characters
-            pass
     return outside
 
 
