@@ -29,4 +29,12 @@ All notable changes to this project are documented here. The format follows
   (`docs/DEMO.md`), Claude Desktop and Claude Code setup.
 - CI (ruff, mypy, pytest with coverage gate, demo, hadolint), Dockerfile and Makefile.
 
+### Fixed (before release, from the pre-publication review)
+- A timeout or output overflow kills the whole process tree of the command, not only the
+  direct child, and a descendant holding a pipe can no longer hang the call.
+- `run_test_suite` ignores a JUnit report left by an earlier run and a report with
+  non-integer totals.
+- The fake offline device serial is `FAKE-DEVICE-0001` (was `R5CT0000FAKE`). The recorded
+  outputs in `docs/results/` had the string replaced in place.
+
 [0.1.0]: https://github.com/Gabnagawo/qa-mcp-server/releases/tag/v0.1.0

@@ -131,4 +131,4 @@ SKIPPED [1] tests\test_security_matrix.py:195: symlinks not permitted on this sy
 ======================= 118 passed, 1 skipped in 3.25s ========================
 $ uv run pytest -m security -q --no-cov
 SKIPPED [1] tests\test_security_matrix.py:195: symlinks not permitted on this system
-124 passed, 1 skipped, 116 deselected in 4.03s
+126 passed, 1 skipped, 118 deselected in 10.01s

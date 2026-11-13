@@ -227,11 +227,11 @@ outputs are in [docs/results/](docs/results/). Machine: Windows 11, AMD64
 | Metric | Result | Reproduce |
 |---|---|---|
 | MCP tools exposed | **10** | `uv run python examples/demo_transcript.py` (header line) |
-| Tests | **240 passed, 1 skipped** (the symlink-escape case needs symlink privilege on Windows) | `uv run pytest` -> [pytest.txt](docs/results/pytest.txt) |
-| Line + branch coverage | **98.42 %** (CI gate: 80 %) | `uv run pytest` |
+| Tests | **244 passed, 1 skipped** (the symlink-escape case needs symlink privilege on Windows) | `uv run pytest` -> [pytest.txt](docs/results/pytest.txt) |
+| Line + branch coverage | **98.44 %** (CI gate: 80 %) | `uv run pytest` |
 | Lint / types | ruff check and format clean, mypy `--strict` clean (19 files) | see [lint.txt](docs/results/lint.txt) |
 | Security matrix: rejected injection cases | **118 rejected, 0 accepted** (1 more skipped on Windows): 69 tool-call cases through a real MCP client (39 command injection, 13 path traversal, 8 policy, 8 limits, 1 package allowlist) + 49 raw adb argv against the allowlist | `uv run pytest tests/test_security_matrix.py -v --no-cov` -> [security-matrix.txt](docs/results/security-matrix.txt) |
-| All `security`-marked tests | 124 passed, 1 skipped (matrix + `shell=False`, timeout, output cap, XML bomb, XXE) | `uv run pytest -m security --no-cov` |
+| All `security`-marked tests | 126 passed, 1 skipped (matrix + `shell=False`, timeout, process-tree kill, output cap, XML bomb, XXE) | `uv run pytest -m security --no-cov` -> end of [security-matrix.txt](docs/results/security-matrix.txt) |
 | Tool-call latency, fake device, in-process | p50 **8.81 ms**, p95 **15.11 ms** over 2,400 calls (12 call types x 200) | `uv run python examples/benchmark_latency.py --iterations 200` -> [latency.txt](docs/results/latency.txt) |
 | Tool-call latency, fake device, stdio subprocess | p50 **10.10 ms**, p95 **15.00 ms** over 2,400 calls | same command |
 | Latency of a rejected call | p50 1.03 ms (in-process), 2.13 ms (stdio) | same command |
