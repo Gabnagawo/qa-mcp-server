@@ -128,7 +128,7 @@ def test_fake_device_errors() -> None:
     with pytest.raises(CommandFailed, match="not found"):
         adb.tap("unknown-1", 1, 1)
     with pytest.raises(CommandFailed, match="offline"):
-        adb.tap("R5CT0000FAKE", 1, 1)
+        adb.tap("FAKE-DEVICE-0001", 1, 1)
     rc = fake.run(("adb", "bogus"), timeout_s=1, max_bytes=10)
     assert rc.returncode == 1
     unsupported = fake.run(("adb", "-s", SERIAL, "shell", "id"), timeout_s=1, max_bytes=100)

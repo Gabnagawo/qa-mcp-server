@@ -1,7 +1,7 @@
 {
   "devices": [
     {"serial": "emulator-5554", "state": "device", "model": "sdk_gphone64_x86_64", "product": "sdk_gphone64_x86_64", "transport_id": "1"},
-    {"serial": "R5CT0000FAKE", "state": "offline", "model": "offline_test_phone", "product": "offline_test_phone", "transport_id": "2"}
+    {"serial": "FAKE-DEVICE-0001", "state": "offline", "model": "offline_test_phone", "product": "offline_test_phone", "transport_id": "2"}
   ],
   "packages": {
     "org.qamcp.sample.notes": {

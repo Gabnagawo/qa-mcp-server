@@ -1,5 +1,5 @@
 provider=ollama model=qwen3:8b backend=fake
-  [ok ] list_devices() -> {"devices":[{"serial":"emulator-5554","state":"device","model":"sdk_gphone64_x86_64","product":"sdk_gphone64_x86_64"},{"serial":"R5CT0000FAKE","state":"offline"
+  [ok ] list_devices() -> {"devices":[{"serial":"emulator-5554","state":"device","model":"sdk_gphone64_x86_64","product":"sdk_gphone64_x86_64"},{"serial":"FAKE-DEVICE-0001","state":"offline"
   [ok ] install_apk(apk_path='sample-notes-1.0.apk', serial='emulator-5554') -> {"serial":"emulator-5554","apk":"sample-notes-1.0.apk","sha256":"a9f36ce9e26147bb58779ae0224220e1614a2f82cdeb560b974b12b6492b8a95","size_bytes":431,"installed":
 
 stopped: answered after 2 tool calls

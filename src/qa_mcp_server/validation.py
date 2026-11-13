@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from qa_mcp_server.errors import PolicyViolation
 
-# Device serials: emulator-5554, R58M123ABC, 192.168.1.20:5555, adb-XYZ._adb-tls-connect._tcp
+# Device serials: emulator-5554, ABC123DEF456, 192.168.1.20:5555, adb-XYZ._adb-tls-connect._tcp
 SERIAL_RE = r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
 # Java package names, at least two segments.
 PACKAGE_RE = r"^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$"

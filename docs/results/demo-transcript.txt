@@ -4,7 +4,7 @@ server qa-mcp-server 0.1.0 (stdio, fake device)
 
 == exploratory session ==
 #1  list_devices()  [11.5 ms]
-    -> online=1  [emulator-5554 (device), R5CT0000FAKE (offline)]
+    -> online=1  [emulator-5554 (device), FAKE-DEVICE-0001 (offline)]
 #2  install_apk(apk_path='sample-notes-1.0.apk')  [8.7 ms]
     -> installed=True sample-notes-1.0.apk sha256=a9f36ce9e261...
 #3  launch_app(package='org.qamcp.sample.notes')  [10.3 ms]

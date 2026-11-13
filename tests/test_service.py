@@ -31,7 +31,7 @@ def _launch(service: QAService) -> None:
 def test_resolve_serial_variants(service: QAService, fake: FakeAdbTransport) -> None:
     assert service.resolve_serial(None) == "emulator-5554"
     with pytest.raises(DeviceError, match="not attached or not online"):
-        service.resolve_serial("R5CT0000FAKE")
+        service.resolve_serial("FAKE-DEVICE-0001")
     with pytest.raises(PolicyViolation):
         service.resolve_serial("bad serial")
     fake.scenario.devices.append(FakeDeviceSpec(serial="emulator-5556"))
