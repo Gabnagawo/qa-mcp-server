@@ -159,3 +159,24 @@ def test_junit_outside_cwd_or_invalid_is_ignored(tmp_path: Path, apk_dir: Path) 
     one = _read_junit(TestSuiteConfig(argv=("x",), cwd=tmp_path, junit_xml=Path("one.xml")))
     assert one == {"tests": 2, "failures": 0, "errors": 0, "skipped": 0}
     assert _read_junit(TestSuiteConfig(argv=("x",))) is None
+    (tmp_path / "nan.xml").write_text('<testsuite tests="many" failures="0"/>')
+    assert (
+        _read_junit(TestSuiteConfig(argv=("x",), cwd=tmp_path, junit_xml=Path("nan.xml"))) is None
+    )
+
+
+def test_stale_junit_report_is_ignored(tmp_path: Path, apk_dir: Path) -> None:
+    # The suite crashes before writing its report; one from an earlier run is on disk.
+    service = _suite_service(tmp_path, apk_dir)
+    (tmp_path / "report.xml").write_text('<testsuite tests="9" failures="0"/>')
+    (tmp_path / "suite.py").write_text("import sys\nsys.exit(2)\n")
+    result = service.run_test_suite(RunSuiteRequest(name="smoke"))
+    assert result.exit_code == 2
+    assert result.junit is None
+
+
+def test_junit_report_rewritten_by_the_run_is_read(tmp_path: Path, apk_dir: Path) -> None:
+    service = _suite_service(tmp_path, apk_dir)
+    (tmp_path / "report.xml").write_text('<testsuite tests="9" failures="0"/>')
+    result = service.run_test_suite(RunSuiteRequest(name="smoke"))
+    assert result.junit == {"tests": 3, "failures": 1, "errors": 0, "skipped": 1}

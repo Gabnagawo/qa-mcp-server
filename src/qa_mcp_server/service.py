@@ -374,6 +374,7 @@ class QAService:
                 dry_run=True,
             )
         start = time.monotonic()
+        stale = _junit_stamp(suite)
         result = self.suite_transport.run(
             argv,
             timeout_s=suite.timeout_s,
@@ -390,17 +391,40 @@ class QAService:
             duration_s=round(time.monotonic() - start, 3),
             output_tail=tail,
             truncated=result.truncated or len(output.encode()) > len(tail.encode()),
-            junit=_read_junit(suite),
+            junit=_read_junit(suite, stale=stale),
             dry_run=False,
         )
 
 
-def _read_junit(suite: TestSuiteConfig) -> dict[str, int] | None:
+def _junit_path(suite: TestSuiteConfig) -> Path | None:
     if suite.junit_xml is None:
         return None
     base = (suite.cwd or Path.cwd()).resolve()
     path = (base / suite.junit_xml).resolve()
     if not path.is_relative_to(base) or not path.is_file():
+        return None
+    return path
+
+
+def _junit_stamp(suite: TestSuiteConfig) -> tuple[int, int] | None:
+    """Modification time and size of the report that exists before a run, if any."""
+    path = _junit_path(suite)
+    return None if path is None else (path.stat().st_mtime_ns, path.stat().st_size)
+
+
+def _read_junit(
+    suite: TestSuiteConfig, *, stale: tuple[int, int] | None = None
+) -> dict[str, int] | None:
+    """JUnit totals written by this run.
+
+    ``stale`` is the stamp taken before the run. A report that still has it was left
+    by an earlier run (the suite crashed before writing a new one) and is ignored,
+    so old totals are never returned next to a new exit code.
+    """
+    path = _junit_path(suite)
+    if path is None:
+        return None
+    if stale is not None and _junit_stamp(suite) == stale:
         return None
     try:
         root = SafeET.parse(path).getroot()
@@ -410,7 +434,10 @@ def _read_junit(suite: TestSuiteConfig) -> dict[str, int] | None:
         return None
     suites = [root] if root.tag == "testsuite" else list(root.iter("testsuite"))
     totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
-    for element in suites:
-        for key in totals:
-            totals[key] += int(element.get(key, "0") or 0)
+    try:
+        for element in suites:
+            for key in totals:
+                totals[key] += int(element.get(key, "0") or 0)
+    except ValueError:
+        return None
     return totals
