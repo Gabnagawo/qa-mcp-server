@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -43,6 +44,55 @@ def test_shell_metacharacters_are_literal_arguments() -> None:
 def test_timeout_kills_process() -> None:
     with pytest.raises(CommandTimeout, match="timed out"):
         run("import time; time.sleep(30)", timeout_s=0.5)
+
+
+# A child that starts a grandchild. The grandchild inherits the output pipes,
+# never exits and appends to the file named in argv[1] every 50 ms.
+_SPAWN_TICKER = """
+import subprocess, sys, time
+ticker = (
+    "import sys, time\\n"
+    "while True:\\n"
+    "    open(sys.argv[1], 'a').write('x')\\n"
+    "    time.sleep(0.05)\\n"
+)
+subprocess.Popen([sys.executable, "-c", ticker, sys.argv[1]])
+"""
+
+
+def _wait_for_ticks(path: Path) -> None:
+    deadline = time.monotonic() + 10
+    while not path.exists() or path.stat().st_size == 0:
+        assert time.monotonic() < deadline, "the grandchild never started"
+        time.sleep(0.05)
+
+
+def _assert_ticker_stopped(path: Path) -> None:
+    time.sleep(0.5)
+    size = path.stat().st_size
+    time.sleep(0.5)
+    assert path.stat().st_size == size, "the grandchild is still running"
+
+
+@pytest.mark.security
+def test_timeout_kills_the_whole_process_tree(tmp_path: Path) -> None:
+    ticks = tmp_path / "ticks"
+    started = time.monotonic()
+    with pytest.raises(CommandTimeout, match="timed out"):
+        run(_SPAWN_TICKER + "time.sleep(60)\n", str(ticks), timeout_s=3)
+    assert time.monotonic() - started < 20
+    _wait_for_ticks(ticks)
+    _assert_ticker_stopped(ticks)
+
+
+@pytest.mark.security
+def test_output_cap_kills_the_whole_process_tree(tmp_path: Path) -> None:
+    ticks = tmp_path / "ticks"
+    flood = "time.sleep(1)\nwhile True: sys.stdout.write('x' * 65536)\n"
+    result = run(_SPAWN_TICKER + flood, str(ticks), max_bytes=100_000, timeout_s=30)
+    assert result.truncated
+    _wait_for_ticks(ticks)
+    _assert_ticker_stopped(ticks)
 
 
 @pytest.mark.security

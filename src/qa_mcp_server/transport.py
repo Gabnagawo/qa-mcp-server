@@ -2,15 +2,18 @@
 
 :class:`SubprocessTransport` is the only place in the package that starts a
 process. It always passes an argument list with ``shell=False``, closes stdin,
-reads stdout/stderr concurrently and kills the process when it exceeds either
-its timeout or its output cap, so a runaway command can neither hang the
-server nor exhaust its memory.
+reads stdout/stderr concurrently and kills the process, with every process it
+started, when it exceeds either its timeout or its output cap, so a runaway
+command can neither hang the server nor exhaust its memory.
 """
 
 from __future__ import annotations
 
+import contextlib
 import os
+import signal
 import subprocess
+import sys
 import threading
 import time
 from collections.abc import Mapping, Sequence
@@ -22,6 +25,10 @@ from qa_mcp_server.errors import CommandFailed, CommandTimeout
 
 STDERR_CAP = 64 * 1024
 _CHUNK = 64 * 1024
+# How long to wait for the pipes to close after the process is gone. A descendant
+# that survived the kill can keep a pipe open; the call must still return.
+_DRAIN_S = 5.0
+_KILL_TOOL_S = 10.0
 
 
 @dataclass(frozen=True)
@@ -73,9 +80,38 @@ class _CappedReader(threading.Thread):
                 self.buffer.extend(chunk[: max(room, 0)])
                 self.truncated = True
                 self._on_overflow.set()
-                break
+                # Leave the pipe open: closing it here would let the child die of a
+                # broken pipe before its process tree is killed, orphaning the rest.
+                return
             self.buffer.extend(chunk)
         self._stream.close()
+
+
+def _kill_tree(proc: subprocess.Popen[bytes]) -> None:
+    """Kill ``proc`` and the processes it started.
+
+    A test suite may be a wrapper (a shell script, gradle, pytest-xdist). Killing only
+    the direct child leaves the rest running and holding the output pipes open.
+    """
+    if sys.platform == "win32":
+        # taskkill walks the tree by parent PID, so it has to run while the parent
+        # is still alive, before proc.kill().
+        with contextlib.suppress(OSError, subprocess.SubprocessError):
+            subprocess.run(  # fixed argv, no shell
+                ["taskkill", "/T", "/F", "/PID", str(proc.pid)],  # noqa: S607
+                shell=False,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=_KILL_TOOL_S,
+                check=False,
+            )
+    else:  # pragma: no cover (POSIX branch; the tests run it on the CI runner)
+        # The child was started as the leader of its own session and process group.
+        with contextlib.suppress(OSError):
+            os.killpg(proc.pid, signal.SIGKILL)
+    with contextlib.suppress(OSError):
+        proc.kill()
 
 
 class SubprocessTransport:
@@ -104,6 +140,8 @@ class SubprocessTransport:
                 stderr=subprocess.PIPE,
                 cwd=cwd,
                 env=full_env,
+                # POSIX: own session, so the whole group can be killed on timeout.
+                start_new_session=True,
             )
         except FileNotFoundError as exc:
             raise CommandFailed(f"executable not found: {args[0]}") from exc
@@ -119,18 +157,20 @@ class SubprocessTransport:
         deadline = start + timeout_s
         while proc.poll() is None:
             if overflow.is_set():
-                proc.kill()
+                _kill_tree(proc)
                 break
             if time.monotonic() >= deadline:
-                proc.kill()
+                _kill_tree(proc)
                 proc.wait()
                 out.join(1)
                 err.join(1)
                 raise CommandTimeout(f"{Path(args[0]).name} timed out after {timeout_s:g}s")
             overflow.wait(0.01)
         returncode = proc.wait()
-        out.join()
-        err.join()
+        out.join(_DRAIN_S)
+        err.join(_DRAIN_S)
+        if out.truncated:
+            proc.stdout.close()
         return RunResult(
             argv=args,
             returncode=returncode,
