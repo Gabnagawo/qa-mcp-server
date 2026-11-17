@@ -5,6 +5,7 @@ An MCP server that gives AI agents (Claude Desktop, Claude Code, any MCP client)
 [![CI](https://github.com/Gabnagawo/qa-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/Gabnagawo/qa-mcp-server/actions/workflows/ci.yml)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![M8ven Score](https://m8ven.ai/badge/mcp/gabnagawo-qa-mcp-server-12y0zc?v=505cd8e5e02d02dc3e044ed11f5a99ac)](https://m8ven.ai/mcp/gabnagawo-qa-mcp-server-12y0zc?s=readme)
 
 ## Why
 
